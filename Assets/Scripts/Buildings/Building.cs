@@ -2,16 +2,17 @@
 using System.Collections.Generic;
 using UnityEngine;
 
+public enum BuildingType { Castle, Barracks, Factory, Hospital, Warehouse}
+
 public class Building : MonoBehaviour
 {
     public int buildingLevel;
     public string buildingName;
     public int id;
 
+    private UIManager uiManager;
     private BuildingReferences buildingRefs;
     private BuildingsInfos buildingsInfo;
-    private UIManager uiManager;
-    private bool isButtonsOpen;
     private bool isUpgrading;
 
     public bool isBuilt; //to be protected after testing done
@@ -21,6 +22,7 @@ public class Building : MonoBehaviour
     {
         buildingRefs = GetComponent<BuildingReferences>();
         buildingsInfo = buildingRefs.buildingsInfo;
+        uiManager = ServiceLocator.GetService<UIManager>();
     }
 
     protected void Start()
@@ -39,20 +41,28 @@ public class Building : MonoBehaviour
         }
     }
 
-    protected virtual void OnClick()
+    public virtual void OnClick()
     {
+        GameObject buttons;
         if (IsBuilt)
-            buildingRefs.activebuildingButtons.SetActive(!isButtonsOpen);
+        {
+            buttons = buildingRefs.activebuildingButtons;
+        }
         else
-            buildingRefs.nonActivebuildingButtons.SetActive(!isButtonsOpen);
+        {
+            buttons = buildingRefs.nonActivebuildingButtons;
+        }
 
-        isButtonsOpen = !isButtonsOpen;
+        if(!buttons.activeInHierarchy) 
+            uiManager.DisableActiveButtons(); //deactivate other open buttons of other buildings
+
+        buttons.SetActive(!buttons.activeInHierarchy);
+        uiManager.AddActiveButtons(buttons);
     }
 
     public virtual void OnBuild()
     {
         IsBuilt = true;
-        isButtonsOpen = false;
         buildingLevel = 1;
         buildingRefs.activebuilding.SetActive(true);
         buildingRefs.nonActivebuilding.SetActive(false);
@@ -62,7 +72,7 @@ public class Building : MonoBehaviour
     public virtual void OnUpgrade()
     {
         //enable upgrade UI panel && zoom on building
-        ServiceLocator.GetService<UIManager>().OnUpgradeBuilding();
+        uiManager.OnUpgradeBuilding();
         ServiceLocator.GetService<UpgradeBuilding>().OnOpen(buildingName, buildingLevel, buildingsInfo.buildingsInfos[id].upgradeInfo);
         //check timer for this level
         //if not zero then turn on Timer
